@@ -506,16 +506,14 @@ class PhysicalDeviceMesh:
 
         if not use_ray:
             self.is_distributed = False
-            self.devices = devices or xb.local_devices()
+            self.devices = devices if devices is not None else xb.local_devices()
             self.host_ids = [0]
             self.host_info = None
-            self.head_ip = "127.0.0.1"
+            self.head_ip = head_ip or "127.0.0.1"
             self.num_devices_per_host = len(self.devices)
             self.workers = None
             self.launched = False
-            self.device_strs = [
-                device_id_to_str(self.head_ip, d.id) for d in self.devices
-            ]
+            self.device_strs = []
         else:
             self.is_distributed = True
             self.host_ids = host_ids
