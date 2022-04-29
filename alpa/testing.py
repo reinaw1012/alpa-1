@@ -298,8 +298,8 @@ class PipelineBasicTest(unittest.TestCase):
                          do_numerical_test=True,
                          overwrite_global_config_dict=None,
                          virtual_mesh=None,
-                         return_value=False):
-        num_micro_batch = 2
+                         return_value=False,
+                         num_micro_batches=None):
         if virtual_mesh is None:
             virtual_mesh = DeviceCluster().get_virtual_physical_mesh()
         set_parallelize_options(devices=virtual_mesh,
@@ -307,7 +307,8 @@ class PipelineBasicTest(unittest.TestCase):
                                 pipeline_stage_mode=pipeline_stage_mode,
                                 cache_compute_cost=cache_compute_cost,
                                 forward_stage_layer_ids=forward_stage_layer_ids,
-                                sub_physical_mesh_shapes=submesh_shapes)
+                                sub_physical_mesh_shapes=submesh_shapes,
+                                num_micro_batches=num_micro_batches)
 
         if overwrite_global_config_dict:
             global_config.update_with_dict(overwrite_global_config_dict)
@@ -329,7 +330,8 @@ class PipelineBasicTest(unittest.TestCase):
         state = create_train_state(rngkey, model, [x, attention_mask])
 
         # Compile
-        global_config.num_micro_batches = num_micro_batch
+        if not num_micro_batches:
+            global_config.num_micro_batches = 2
         serial_train_step = get_bert_layer_train_step(False,
                                                       None,
                                                       None,
