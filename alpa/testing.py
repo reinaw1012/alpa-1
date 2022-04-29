@@ -216,11 +216,13 @@ class PipelineBasicTest(unittest.TestCase):
                 test_remat=False,
                 pipeline_stage_mode="uniform_layer_gpipe",
                 do_numerical_test=True,
-                return_value=False):
+                return_value=False, 
+                num_micro_batches=None):
         virtual_mesh = DeviceCluster().get_virtual_physical_mesh()
         set_parallelize_options(devices=virtual_mesh,
                                 strategy="pipeshard_parallel",
-                                pipeline_stage_mode=pipeline_stage_mode)
+                                pipeline_stage_mode=pipeline_stage_mode, 
+                                num_micro_batches=num_micro_batches)
 
         # Init model and optimizer
         batch_size = 64
@@ -237,7 +239,8 @@ class PipelineBasicTest(unittest.TestCase):
         state = create_train_state(rngkey, model, [x])
 
         # Compile
-        global_config.num_micro_batches = 4
+        if not num_micro_batches:
+            global_config.num_micro_batches = 4
         serial_train_step = get_mlp_train_step(False,
                                                None,
                                                None,

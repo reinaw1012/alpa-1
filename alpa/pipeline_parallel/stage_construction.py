@@ -254,7 +254,7 @@ def distributed_profile_on_mesh(meshes: Sequence[VirtualPhysicalMesh], layers,
                                 donation_mapping, global_outvars,
                                 apply_grad_layers, apply_grad_global_info,
                                 autosharding_configs, cluster_size,
-                                layer_flops_prefix_sum, mesh_cached_result):
+                                layer_flops_prefix_sum, mesh_cached_result, num_micro_batches):
     """TODO(zhuohan): docstring."""
     timers("stage-construction-compilation").start()
     assert len(layers) % 2 == 0
@@ -317,7 +317,7 @@ def distributed_profile_on_mesh(meshes: Sequence[VirtualPhysicalMesh], layers,
 
     print("- Compile all stages")
     try:
-        compiled_outputs = compile_all(stages)
+        compiled_outputs = compile_all(stages, num_micro_batches)
     except RayActorError as e:
         logger.warning(f"Compilation fatal error: {e}")
         timers("stage-construction-compilation").suspend()
@@ -348,7 +348,7 @@ def get_compute_cost(virtual_mesh: VirtualPhysicalMesh,
                      layers: Sequence[JaxPipelineComputation], donation_mapping,
                      global_outvars,
                      apply_grad_layers: Sequence[JaxPipelineComputation],
-                     apply_grad_global_info, cached_result):
+                     apply_grad_global_info, cached_result, num_micro_batches):
     """Get computation cost for each possible (stage, mesh) configuration.
 
     This function enumerates all given submesh choices, then profiles compute
@@ -426,7 +426,7 @@ def get_compute_cost(virtual_mesh: VirtualPhysicalMesh,
              sliced_virtual_meshes, layers, donation_mapping, global_outvars,
              apply_grad_layers, apply_grad_global_info,
              autosharding_configs[mesh_id], cluster_size,
-             layer_flops_prefix_sum, mesh_cached_result)
+             layer_flops_prefix_sum, mesh_cached_result, num_micro_batches)
 
         compute_cost[:, :, mesh_id, :] = mesh_compute_cost
         max_n_succ_stages[:, :, mesh_id, :] = mesh_max_n_succ_stages
@@ -608,7 +608,7 @@ def optimize_cost(layers, mesh, donation_mapping, global_outvars,
         cached_result = None
     compute_cost, max_n_succ_stages = get_compute_cost(
         mesh, submesh_choices, autosharding_configs, layers, donation_mapping,
-        global_outvars, jax_apply_layers, apply_grad_global_info, cached_result)
+        global_outvars, jax_apply_layers, apply_grad_global_info, cached_result, num_micro_batches)
     best_cost, solution = dp(num_layers, mesh.num_devices, num_micro_batches,
                              submesh_choices, num_autosharding_configs,
                              compute_cost, max_n_succ_stages)
@@ -685,8 +685,8 @@ def cluster_layers_and_slice_mesh(
             compute_cost, max_n_succ_stages = get_compute_cost(
                 devices, submesh_choices, autosharding_configs, layers,
                 donation_mapping, global_outvars, jax_apply_layers,
-                apply_grad_global_info, cached_result)
-            _, solution = dp(num_layers, devices.num_devices, num_micro_batches,
+                apply_grad_global_info, cached_result, num_micro_batches)
+            _, solution = dp(num_layers, mesh.num_devices, num_micro_batches,
                              submesh_choices, num_autosharding_configs,
                              compute_cost, max_n_succ_stages)
 
